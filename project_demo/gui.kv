@@ -1,0 +1,17 @@
+GridLayout:
+    cols: 2
+    Label:
+        text: 'Expense Amount:'
+    TextInput:
+        id: expense_amount
+    Label:
+        text: 'Expense Date:'
+    TextInput:
+        id: expense_date
+    Label:
+        text: 'Expense Category:'
+    TextInput:
+        id: expense_category
+    Button:
+        text: 'Add Expense'
+        on_press: app.add_expense()
