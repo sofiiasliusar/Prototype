@@ -7,8 +7,7 @@ from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 from kivy.uix.spinner import Spinner
 from datetime import datetime, timedelta
-# python carousel.py -m screen:phone_iphone_5,portrait,scale=.5
-
+# python carousel.py -m screen:phone_iphone_6,portrait,scale=.5
 class ExpenseApp(App):
 
     def build(self):
@@ -39,7 +38,7 @@ class ExpenseScreen(BoxLayout):
         self.orientation = 'vertical'
 
         # Display the current date at the top
-        self.add_widget(Label(text=date.strftime("%Y-%m-%d"), size_hint=(1, 0.1)))
+        self.add_widget(Label(text=date.strftime("%d-%m-%Y"), size_hint=(1, 0.1)))
         main_layout = FloatLayout(size_hint=(1, 0.8))
         
 
