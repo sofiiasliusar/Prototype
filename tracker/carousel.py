@@ -7,6 +7,7 @@ from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 from kivy.uix.spinner import Spinner
 from datetime import datetime, timedelta
+# python carousel.py -m screen:phone_iphone_5,portrait,scale=.5
 
 class ExpenseApp(App):
 
