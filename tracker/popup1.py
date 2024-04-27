@@ -6,22 +6,23 @@ from kivy.uix.carousel import Carousel
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 from kivy.uix.spinner import Spinner
-from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
+from kivy.uix.popup import Popup
 from datetime import datetime, timedelta
+from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 
-# python popup2.py -m screen:phone_iphone_6,portrait,scale=.5
 class ExpenseApp(App):
 
     def build(self):
-        # Create a ScreenManager to manage multiple screens
+        # Create the main layout
         self.screen_manager = ScreenManager(transition=SlideTransition(duration=0))
-        # Create and add the main screen
+        
         main_screen = MainScreen(name='main')
         self.screen_manager.add_widget(main_screen)
-        menu_screen = MenuScreen(name='menu')
-        self.screen_manager.add_widget(menu_screen)
+        review_screen = ReviewScreen(name='review')
+        self.screen_manager.add_widget(review_screen)
+        
         return self.screen_manager
-    
+
 class MainScreen(Screen):
 
     def __init__(self, **kwargs):
@@ -29,26 +30,50 @@ class MainScreen(Screen):
 
         main_layout = BoxLayout(orientation='vertical')
 
+        # Create the menu button
         menu_button = Button(text="Menu", size_hint=(None, None), size=(100, 50))
-        menu_button.bind(on_press=self.go_to_menu)
+        menu_button.bind(on_press=self.open_menu_popup)
         main_layout.add_widget(menu_button)
 
+        # Create the carousel
         carousel = Carousel(direction='left')
-        
         for i in range(5):  
             date = datetime.now() - timedelta(days=i)
             screen = ExpenseScreen(date=date)
             carousel.add_widget(screen)
-
         main_layout.add_widget(carousel)
 
         self.add_widget(main_layout)
 
-    def go_to_menu(self, instance):
-        # Switch to the menu screen
-        self.manager.current = 'menu'
+    def open_menu_popup(self, instance):
+        # Create the popup content
+        popup_width = 0.5  # 30% of the screen width
+        popup_height = 1  # 100% of the screen height
 
-class MenuScreen(Screen):
+        # Create the popup content
+        popup_content = BoxLayout(orientation='vertical')
+        buttons_layout = BoxLayout(orientation='vertical', size_hint_y=0.33)
+        spacer_layout = BoxLayout()  # This will take the remaining space
+
+        # Create buttons for each option
+        option_names = ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"]
+        for option_name in option_names:
+            button = Button(text=option_name, size_hint_y=None, height=50)
+            button.bind(on_press=self.go_to_review)
+            buttons_layout.add_widget(button)
+
+        popup_content.add_widget(buttons_layout)
+        popup_content.add_widget(spacer_layout)  # Add the spacer to fill space
+
+        # Create and show the popup
+        popup = Popup(title='Menu', content=popup_content,
+                      size_hint=(popup_width, popup_height), pos_hint={'x': 0, 'top': 1})
+        popup.open()
+
+    def go_to_review(self, instance):
+        self.manager.current = "review"
+
+class ReviewScreen(Screen):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -68,7 +93,7 @@ class MenuScreen(Screen):
         # Switch back to the main screen
         self.manager.current = 'main'
 
-class ExpenseScreen(BoxLayout): #not sure if it`s screen (Screen)
+class ExpenseScreen(BoxLayout):
 
     def __init__(self, date, **kwargs):
         super().__init__(**kwargs)
@@ -76,17 +101,13 @@ class ExpenseScreen(BoxLayout): #not sure if it`s screen (Screen)
 
         self.add_widget(Label(text=date.strftime("%d-%m-%Y"), size_hint=(1, 0.1)))
         main_layout = FloatLayout(size_hint=(1, 0.8))
-        
 
-        input_layout = BoxLayout(orientation='horizontal', size_hint=(0.8, 0.6)) #spacing=10
+        input_layout = BoxLayout(orientation='horizontal', size_hint=(0.8, 0.6))
         input_layout.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
-        
-        
-       
 
         sum_layout = BoxLayout(orientation='vertical')
         for _ in range(5):
-            sum_input = TextInput(hint_text="Sum", multiline=False, height=50) #size_hint=(0.5, 1)
+            sum_input = TextInput(hint_text="Sum", multiline=False, height=50)
             sum_layout.add_widget(sum_input)
         input_layout.add_widget(sum_layout)
 
@@ -105,12 +126,9 @@ class ExpenseScreen(BoxLayout): #not sure if it`s screen (Screen)
         main_layout.add_widget(input_layout)
         self.add_widget(main_layout)
 
-# Register screens with ScreenManager
 sm = ScreenManager()
 sm.add_widget(MainScreen(name='main'))
-sm.add_widget(MenuScreen(name='menu'))
-
+sm.add_widget(ReviewScreen(name='menu'))
 
 if __name__ == '__main__':
     ExpenseApp().run()
-
