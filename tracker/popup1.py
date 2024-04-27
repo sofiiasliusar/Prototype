@@ -106,26 +106,33 @@ class ExpenseScreen(BoxLayout):
         input_layout.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
 
         sum_layout = BoxLayout(orientation='vertical')
-        for _ in range(5):
+        for _ in range(10):
             sum_input = TextInput(hint_text="Sum", multiline=False, height=50)
             sum_layout.add_widget(sum_input)
         input_layout.add_widget(sum_layout)
 
         description_layout = BoxLayout(orientation='vertical')
-        for _ in range(5):
+        for _ in range(10):
             description_input = TextInput(hint_text="Description", multiline=False, height=50)
             description_layout.add_widget(description_input)
         input_layout.add_widget(description_layout)
 
         category_layout = BoxLayout(orientation='vertical') 
         categories = ["Food", "Transportation", "Entertainment", "Utilities", "Other"]
-        for _ in range(5):
+        for _ in range(10):
             category_spinner = Spinner(text='Category', values=categories, height=50) 
             category_layout.add_widget(category_spinner)
         input_layout.add_widget(category_layout)
         main_layout.add_widget(input_layout)
         self.add_widget(main_layout)
+        bottom_button = Button(text="Submit", size_hint=(1, 0.1))
+        bottom_button.bind(on_press=self.submit_expenses)
+        self.add_widget(bottom_button)
 
+    def submit_expenses(self, instance):
+        # Here you can handle the submission of expenses
+        pass
+    
 sm = ScreenManager()
 sm.add_widget(MainScreen(name='main'))
 sm.add_widget(ReviewScreen(name='menu'))
