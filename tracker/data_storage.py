@@ -8,7 +8,7 @@ from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 from kivy.uix.spinner import Spinner
 from kivy.uix.popup import Popup
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 
 # Database setup
@@ -16,25 +16,92 @@ def init_db():
     conn = sqlite3.connect('expenseapp.db')
     c = conn.cursor()
     c.execute('CREATE TABLE IF NOT EXISTS expenses (id INTEGER PRIMARY KEY, date TEXT, sum REAL, description TEXT, category TEXT)')
+    c.execute('CREATE TABLE IF NOT EXISTS button_states (date TEXT PRIMARY KEY, button_state TEXT)')
+    c.execute('CREATE TABLE IF NOT EXISTS totals (date TEXT PRIMARY KEY, total REAL)')  # Add initialization of totals table
     conn.commit()
+    c.execute('SELECT * FROM expenses')
+    data = c.fetchall()
     conn.close()
+    return data
 
 # Update or insert data into database
 def update_db(date, sum, description, category):
     conn = sqlite3.connect('expenseapp.db')
     c = conn.cursor()
-    c.execute('INSERT INTO expenses (date, sum, description, category) VALUES (?, ?, ?, ?)', (date, sum, description, category))
+    c.execute('INSERT OR REPLACE INTO expenses (date, sum, description, category) VALUES (?, ?, ?, ?)', (date, sum, description, category))
     conn.commit()
     conn.close()
 
+# Update or insert button state into database
+def update_button_state(date, button_state):
+    conn = sqlite3.connect('expenseapp.db')
+    c = conn.cursor()
+    c.execute('INSERT OR REPLACE INTO button_states (date, button_state) VALUES (?, ?)', (date, button_state))
+    conn.commit()
+    conn.close()
+# button_states
+
+# Get button state from database for a specific date
+def get_button_state(date):
+    conn = sqlite3.connect('expenseapp.db')
+    c = conn.cursor()
+    c.execute('SELECT button_state FROM button_states WHERE date=?', (date,))
+    data = c.fetchone()
+    conn.close()
+    return data[0] if data else 'Submit'  # Default to 'Submit' if no button state is found
+def create_table(date):
+    conn = sqlite3.connect('expenseapp.db')
+    c = conn.cursor()
+    table_name = "expenses_" + date.strftime("%d_%m_%Y")
+    c.execute(f'CREATE TABLE IF NOT EXISTS {table_name} (id INTEGER PRIMARY KEY, sum REAL, description TEXT, category TEXT)')
+    conn.commit()
+    conn.close()
+def update_or_insert_row(table_name, row_id, sum_value, description, category):
+    conn = sqlite3.connect('expenseapp.db')
+    c = conn.cursor()
+    c.execute(f'SELECT * FROM {table_name} WHERE id=?', (row_id,))
+    data = c.fetchone()
+    if data:
+        # Update existing row
+        c.execute(f'UPDATE {table_name} SET sum=?, description=?, category=? WHERE id=?', (sum_value, description, category, row_id))
+    else:
+        # Insert new row
+        c.execute(f'INSERT INTO {table_name} (id, sum, description, category) VALUES (?, ?, ?, ?)', (row_id, sum_value, description, category))
+    conn.commit()
+    conn.close()
+def delete_row(table_name, row_id):
+    conn = sqlite3.connect('expenseapp.db')
+    c = conn.cursor()
+    c.execute(f'DELETE FROM {table_name} WHERE id=?', (row_id,))
+    conn.commit()
+    conn.close()
+def save_total(date, total):
+    conn = sqlite3.connect('expenseapp.db')
+    c = conn.cursor()
+    c.execute('INSERT OR REPLACE INTO totals (date, total) VALUES (?, ?)', (date, total))
+    conn.commit()
+    conn.close()
+
+def get_total(date):
+    conn = sqlite3.connect('expenseapp.db')
+    c = conn.cursor()
+    c.execute('SELECT total FROM totals WHERE date=?', (date,))
+    data = c.fetchone()
+    conn.close()
+    return data[0] if data else None
 class ExpenseScreen(BoxLayout):
     def __init__(self, date, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         self.date = date.strftime("%d-%m-%Y")
+        self.weekday = date.strftime("%A") 
+        self.table_name = "expenses_" + date.strftime("%d_%m_%Y")
+        create_table(date)  # Create table for the specific date if not exists
 
         self.add_widget(Label(text=self.date, size_hint=(1, 0.1)))
-        main_layout = FloatLayout(size_hint=(1, 0.8))
+        self.add_widget(Label(text=self.weekday, size_hint=(1, 0.1)))
+        
+        main_layout = FloatLayout(size_hint=(1, 0.7))
 
         self.sum_inputs = []
         self.description_inputs = []
@@ -44,13 +111,13 @@ class ExpenseScreen(BoxLayout):
 
         sum_layout = BoxLayout(orientation='vertical')
         description_layout = BoxLayout(orientation='vertical')
-        category_layout = BoxLayout(orientation='vertical') 
-        categories = ["Food", "Transportation", "Entertainment", "Utilities", "Other"]
+        category_layout = BoxLayout(orientation='vertical')
+        categories = ["Food", "Transportation", "Entertainment", "Utilities", "Other"] + [""]
 
         for _ in range(10):
             sum_input = TextInput(hint_text="Sum", multiline=False, height=50)
             description_input = TextInput(hint_text="Description", multiline=False, height=50)
-            category_spinner = Spinner(text='Category', values=categories, height=50)
+            category_spinner = Spinner(text='', values=categories, height=50)
             
             self.sum_inputs.append(sum_input)
             self.description_inputs.append(description_input)
@@ -66,16 +133,80 @@ class ExpenseScreen(BoxLayout):
         
         main_layout.add_widget(input_layout)
         self.add_widget(main_layout)
+        self.total_label = Label(text="", size_hint=(1, 0.1))
+        self.add_widget(self.total_label)
+        self.submit_button = Button(text=get_button_state(self.date), size_hint=(1, 0.1))
+        self.submit_button.bind(on_press=self.on_button_press)
+        self.add_widget(self.submit_button)
+        self.load_data()
+        self.load_total()
+        # Load existing data into input fields
+        data = init_db()
+        for i, row in enumerate(data):
+            if row[1] == self.date:
+                self.sum_inputs[i].text = str(row[2])
+                self.description_inputs[i].text = row[3]
+                self.category_spinners[i].text = row[4]
+                self.set_readonly(True)  # Set fields to readonly if already submitted
 
-        bottom_button = Button(text="Submit", size_hint=(1, 0.1))
-        bottom_button.bind(on_press=self.submit_expenses)
-        self.add_widget(bottom_button)
-
-    def submit_expenses(self, instance):
+    def on_button_press(self, instance):
+        if instance.text == 'Submit':
+            total = 0
+            for i, (sum_input, description_input, category_spinner) in enumerate(zip(self.sum_inputs, self.description_inputs, self.category_spinners), start=1):
+                if sum_input.text and description_input.text:  # Ensure basic validation
+                    update_or_insert_row(self.table_name, i, float(sum_input.text), description_input.text, category_spinner.text)
+                    total += float(sum_input.text)  
+                else:
+                    # If sum or description is empty, delete the row from the database
+                    delete_row(self.table_name, i)
+            update_button_state(self.date, 'Edit')  # Update button state to 'Edit'
+            self.set_readonly(True)
+            instance.text = 'Edit'
+             # Update total label
+            self.total_label.text = f"Total: {total}"
+            # Save total to separate table
+            save_total(self.date, total)
+        elif instance.text == 'Edit':
+            self.set_readonly(False)
+            update_button_state(self.date, 'Submit')  # Update button state to 'Submit'
+            instance.text = 'Submit'
+            # Clear total label when in 'Edit' mode
+            self.total_label.text = ""
+    def load_total(self):
+        total = get_total(self.date)
+        if total is not None:
+            self.total_label.text = f"Total: {total}"
+    def set_readonly(self, readonly):
         for sum_input, description_input, category_spinner in zip(self.sum_inputs, self.description_inputs, self.category_spinners):
-            if sum_input.text and description_input.text:  # Ensure some basic validation
-                update_db(self.date, float(sum_input.text), description_input.text, category_spinner.text)
+            sum_input.readonly = readonly
+            description_input.disabled = readonly
+            category_spinner.disabled = readonly
+    def on_pre_enter(self, *args):
+        # Load existing data into input fields every time the screen is shown
+        self.load_data()
+        button_state = get_button_state(self.date)
+        if button_state == 'Edit':
+            total = get_total(self.date)
+            if total is not None:
+                self.total_label.text = f"Total: {total}"
+            else:
+                self.total_label.text = ""
 
+        # Set readonly state based on button state
+        self.set_readonly(button_state == 'Edit')
+    def load_data(self):
+        conn = sqlite3.connect('expenseapp.db')
+        c = conn.cursor()
+        c.execute(f'SELECT * FROM {self.table_name}')
+        data = c.fetchall()
+        conn.close()
+
+        for i, row in enumerate(data):
+            if i < len(self.sum_inputs):
+                self.sum_inputs[i].text = str(row[1])
+                self.description_inputs[i].text = row[2]
+                self.category_spinners[i].text = row[3]
+        self.set_readonly(get_button_state(self.date) == 'Edit')
 class ReviewScreen(Screen):
 
     def __init__(self, **kwargs):
@@ -109,15 +240,21 @@ class MainScreen(Screen):
         main_layout.add_widget(menu_button)
 
         # Create the carousel
-        carousel = Carousel(direction='left')
-        for i in range(5):  
-            date = datetime.now() - timedelta(days=i)
-            screen = ExpenseScreen(date=date)
+        carousel = Carousel(direction='right')
+        
+        today = datetime.now().date()
+        # Calculate Monday of the current week
+        monday = today - timedelta(days=today.weekday())
+        
+        for i in range(7):
+            current_date = monday + timedelta(days=i)
+            screen = ExpenseScreen(date=current_date)
             carousel.add_widget(screen)
         main_layout.add_widget(carousel)
 
         self.add_widget(main_layout)
-
+        current_index = (today - monday).days
+        carousel.load_slide(carousel.slides[current_index])
     def open_menu_popup(self, instance):
         # Create the popup content
         popup_width = 0.5  # 30% of the screen width
@@ -160,3 +297,4 @@ class ExpenseApp(App):
 
 if __name__ == '__main__':
     ExpenseApp().run()
+# python data_storage.py -m screen:phone_iphone_6,portrait,scale=.5
