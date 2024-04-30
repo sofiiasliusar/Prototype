@@ -15,7 +15,6 @@ from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 def init_db():
     conn = sqlite3.connect('expenseapp.db')
     c = conn.cursor()
-    c.execute('CREATE TABLE IF NOT EXISTS expenses (id INTEGER PRIMARY KEY, date TEXT, sum REAL, description TEXT, category TEXT)')
     c.execute('CREATE TABLE IF NOT EXISTS button_states (date TEXT PRIMARY KEY, button_state TEXT)')
     c.execute('CREATE TABLE IF NOT EXISTS totals (date TEXT PRIMARY KEY, total REAL)')  # Add initialization of totals table
     conn.commit()
@@ -218,8 +217,8 @@ class ReviewScreen(Screen):
         back_button.bind(on_press=self.go_to_main)
         menu_layout.add_widget(back_button)
 
-        menu_label = Label(text="Menu Screen", size_hint=(1, 0.9))
-        menu_layout.add_widget(menu_label)
+        self.menu_label = Label(text="Review Screen", size_hint=(1, 0.9))
+        menu_layout.add_widget(self.menu_label)
 
         self.add_widget(menu_layout)
 
@@ -227,6 +226,25 @@ class ReviewScreen(Screen):
         # Switch back to the main screen
         self.manager.current = 'main'
 
+class WeekScreen(ReviewScreen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.menu_label.text = "Week Total"
+
+class MonthScreen(ReviewScreen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.menu_label.text = "Month Total"
+
+class ReminderScreen(ReviewScreen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.menu_label.text = "Set a reminder"
+
+class SettingsScreen(ReviewScreen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.menu_label.text = "Change language"
 class MainScreen(Screen):
 
     def __init__(self, **kwargs):
@@ -266,10 +284,10 @@ class MainScreen(Screen):
         spacer_layout = BoxLayout()  # This will take the remaining space
 
         # Create buttons for each option
-        option_names = ["Option 1", "Option 2", "Option 3", "Option 4", "Option 5"]
+        option_names = ["Review", "Week", "Month", "Reminder", "Settings"]
         for option_name in option_names:
             button = Button(text=option_name, size_hint_y=None, height=50)
-            button.bind(on_press=self.go_to_review)
+            button.bind(on_press=self.on_button_press)
             buttons_layout.add_widget(button)
 
         popup_content.add_widget(buttons_layout)
@@ -279,9 +297,29 @@ class MainScreen(Screen):
         popup = Popup(title='Menu', content=popup_content,
                       size_hint=(popup_width, popup_height), pos_hint={'x': 0, 'top': 1})
         popup.open()
-
+    def on_button_press(self, instance):
+        # This method will be called each time a button is pressed
+        if instance.text == "Review":
+            self.go_to_review(instance)
+        elif instance.text == "Week":
+            self.go_to_week(instance)
+        elif instance.text == "Month":
+            self.go_to_month(instance)
+        elif instance.text == "Reminder":
+            self.set_reminder(instance)
+        elif instance.text == "Settings":
+            self.open_settings(instance)
     def go_to_review(self, instance):
         self.manager.current = "review"
+    def go_to_week(self, instance):
+        self.manager.current = "week"
+    def go_to_month(self, instance):
+        self.manager.current = "month"
+    def set_reminder(self, instance):
+        self.manager.current = "reminder"
+    def open_settings(self, instance):
+        self.manager.current = "settings"
+    
 
 class ExpenseApp(App):
     def build(self):
@@ -292,6 +330,15 @@ class ExpenseApp(App):
         self.screen_manager.add_widget(main_screen)
         review_screen = ReviewScreen(name='review')
         self.screen_manager.add_widget(review_screen)
+        week_screen = WeekScreen(name='week')
+        self.screen_manager.add_widget(week_screen)
+        month_screen = MonthScreen(name='month')
+        self.screen_manager.add_widget(month_screen)
+        reminder_screen = ReminderScreen(name='reminder')
+        self.screen_manager.add_widget(reminder_screen)
+        settings_screen = SettingsScreen(name='settings')
+        self.screen_manager.add_widget(settings_screen)
+
         
         return self.screen_manager
 
