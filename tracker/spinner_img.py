@@ -25,10 +25,11 @@ class DefaultImageOption(BoxLayout):
         self.size_hint_y = None
         self.height = '50dp'
         
+        
         # Create an image widget and add it to the option
         self.image = Image(source=image_path, size_hint=(None, None), size=(50, 50), allow_stretch=True)
         self.add_widget(self.image)
-
+        
 
 class ImageSpinner(BoxLayout):
     def __init__(self, **kwargs):
@@ -46,7 +47,7 @@ class ImageSpinner(BoxLayout):
         self.spinner = Spinner(
             option_cls=ImageSpinnerOption,
             values=self.image_paths[1:],  # Exclude the blank image from the values
-            text=self.image_paths[1],  # Set the first image as default
+            text=self.image_paths[0],  # Set the first image as default, before it was 1 - displayed blank and wrote food. I changed to 0 - displays and writes blank
             size_hint=(None, None),
             size=(50, 50),
             pos_hint={'center_x': 0.5},
@@ -61,8 +62,8 @@ class ImageSpinner(BoxLayout):
         self.add_widget(self.spinner)
 
     def on_spinner_select(self, spinner, text):
-        pass  # No action needed here
-
+        # Update image, otherwise just text is changed
+        self.spinner.children[0].image.source = text
 
 class ImageSpinnerApp(App):
     def build(self):

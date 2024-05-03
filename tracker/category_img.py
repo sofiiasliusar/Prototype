@@ -10,7 +10,15 @@ from kivy.uix.spinner import Spinner
 from kivy.uix.popup import Popup
 from datetime import datetime, timedelta, date
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
+from kivy.lang import Builder
+from kivy.graphics import Color, Rectangle
+from kivy.metrics import dp
+from kivy.properties import ListProperty, DictProperty
+from kivy.uix.image import Image
+from kivy.uix.spinner import SpinnerOption, Spinner
 
+class DescriptionInput(TextInput):
+    pass
 # Database setup
 def init_db():
     conn = sqlite3.connect('expenseapp.db')
@@ -109,14 +117,26 @@ class ExpenseScreen(BoxLayout):
         input_layout = BoxLayout(orientation='horizontal', size_hint=(0.8, 0.6), pos_hint={'center_x': 0.5, 'center_y': 0.5})
 
         sum_layout = BoxLayout(orientation='vertical', size_hint=(0.2, 1))
-        description_layout = BoxLayout(orientation='vertical', size_hint=(0.4, 1))
-        category_layout = BoxLayout(orientation='vertical', size_hint=(0.3, 1))
-        categories = ["Food", "Transportation", "Entertainment", "Utilities", "Other"] + [""]
+        description_layout = BoxLayout(orientation='vertical', size_hint=(0.6, 1))
+        category_layout = BoxLayout(orientation='vertical', size_hint=(0.1, 1))
+        # categories = ["Food", "Transportation", "Entertainment", "Utilities", "Other"] + [""]
+        category_images = {
+            "Food": r"C:\Prototype-main\sprites\food.png",
+            "Transportation": r"\Prototype-main\sprites\transportation.png",
+            "Rest": r"\Prototype-main\sprites\rest.png",
+            "Utilities": r"\Prototype-main\sprites\utilities.png",
+            "Beauty": r"\Prototype-main\sprites\beauty_health.png",
+            "": r"\Prototype-main\sprites\blank.png"
 
+        }
+
+        # Add image paths to the categories list
+        categories = list(category_images.keys()) 
         for _ in range(10):
             sum_input = TextInput(hint_text="Sum", multiline=False, height=50)
-            description_input = TextInput(hint_text="Description", multiline=False, height=50)
-            category_spinner = Spinner(text='', values=categories, height=50)
+            description_input = DescriptionInput(hint_text="Description", multiline=False, height=50)
+            category_spinner = ImageSpinner(text='', values=categories, height=50, category_images=category_images)
+
             
             self.sum_inputs.append(sum_input)
             self.description_inputs.append(description_input)
@@ -131,7 +151,6 @@ class ExpenseScreen(BoxLayout):
         input_layout.add_widget(description_layout)
         input_layout.add_widget(BoxLayout(size_hint=(0.05, 1)))
         input_layout.add_widget(category_layout)
-        
         
         main_layout.add_widget(input_layout)
         self.add_widget(main_layout)
@@ -174,6 +193,7 @@ class ExpenseScreen(BoxLayout):
             instance.text = 'Submit'
             # Clear total label when in 'Edit' mode
             self.total_label.text = ""
+            
     def load_total(self):
         total = get_total(self.date)
         if total is not None:
@@ -209,6 +229,46 @@ class ExpenseScreen(BoxLayout):
                 self.description_inputs[i].text = row[2]
                 self.category_spinners[i].text = row[3]
         self.set_readonly(get_button_state(self.date) == 'Edit')
+
+class ImageSpinnerOption(SpinnerOption):
+    def __init__(self, **kwargs):
+        super(ImageSpinnerOption, self).__init__(**kwargs)
+
+        # Create an image widget and add it to the spinner option
+        self.image = Image(source=kwargs['text'], size_hint=(None, None), allow_stretch=True)
+        self.bind(size=self.update_image_pos)
+        self.add_widget(self.image)
+        self.text = "" 
+
+    def update_image_pos(self, *args):
+        # Center the image within the spinner option
+        self.image.size = self.size
+        self.image.pos = self.pos
+
+
+class DefaultImageOption(BoxLayout):
+    def __init__(self, image_path, **kwargs):
+        super(DefaultImageOption, self).__init__(**kwargs)
+        self.size_hint_y = None
+        self.height = '50dp'
+        
+        # Create an image widget and add it to the option
+        self.image = Image(source=image_path, size_hint=(None, None), size=(50, 50), allow_stretch=True)
+        self.add_widget(self.image)
+# 'assets/Sacramento-Regular.ttf'
+
+class ImageSpinner(Spinner):
+    category_images = DictProperty({})  # Define category_images as a DictProperty
+
+    def __init__(self, **kwargs):
+        super(ImageSpinner, self).__init__(**kwargs)
+        self.category_images = kwargs.get('category_images', {})  # Initialize category_images
+
+    def on_text(self, instance, value):
+        if value in self.category_images:
+            # Set the background image based on the selected value
+            self.background_normal = self.category_images[value]
+
 class ReviewScreen(Screen):
 
     def __init__(self, **kwargs):
@@ -326,6 +386,7 @@ class MainScreen(Screen):
 
 class ExpenseApp(App):
     def build(self):
+        Builder.load_file('expense.kv')
         init_db()  # Initialize database
         self.screen_manager = ScreenManager(transition=SlideTransition(duration=0))
         
