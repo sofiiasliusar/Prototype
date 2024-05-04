@@ -72,3 +72,6 @@ class ImageSpinnerApp(App):
 
 if __name__ == "__main__":
     ImageSpinnerApp().run()
+
+# take away the label and add storage
+# has default display
