@@ -1,18 +1,28 @@
-import sqlite3
 from kivy.app import App
-from kivy.uix.spinner import Spinner
-from kivy.uix.image import Image
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.dropdown import DropDown
-from kivy.uix.button import Button
+from kivy.uix.image import Image
+from kivy.uix.spinner import SpinnerOption, Spinner
 from kivy.properties import ObjectProperty
+import sqlite3
+
+class ImageSpinnerOption(SpinnerOption):
+    def __init__(self, **kwargs):
+        super(ImageSpinnerOption, self).__init__(**kwargs)
+
+        # Create an image widget and add it to the spinner option
+        self.image = Image(source=kwargs['text'], size_hint=(None, None), allow_stretch=True)
+        self.bind(size=self.update_image_pos)
+        self.add_widget(self.image)
+        
+    def update_image_pos(self, *args):
+        # Center the image within the spinner option
+        self.image.size = self.size
+        self.image.pos = self.pos
 
 class CustomSpinner(Spinner):
     pass
 
-class ImageSpinnerApp(App):
-    connection = None
-    cursor = None
+class ImageSpinner(BoxLayout):
     selected_value = ObjectProperty(None)
 
     images = {
@@ -22,17 +32,48 @@ class ImageSpinnerApp(App):
         'rest': {'name': 'Rest', 'path': r"C:\Prototype-main\sprites\rest.png"},
     }
 
+    def __init__(self, **kwargs):
+        super(ImageSpinner, self).__init__(**kwargs)
+
+        # List of image paths
+        self.image_paths = [self.images[key]['path'] for key in self.images.keys()]
+
+        # Spinner widget to select images
+        self.spinner = Spinner(
+            option_cls=ImageSpinnerOption,
+            values=self.image_paths,
+            text=self.image_paths[0],
+            size_hint=(None, None),
+            size=(50, 50),
+            pos_hint={'center_x': 0.5},
+        )
+        self.spinner.bind(text=self.on_spinner_select)
+
+        # Add default image within the spinner
+        default_image_option = ImageSpinnerOption(text=self.image_paths[0])
+        self.spinner.values.append(self.image_paths[0])
+        self.spinner.add_widget(default_image_option)
+
+        self.add_widget(self.spinner)
+
+    def on_spinner_select(self, spinner, text):
+        # Update image, otherwise just text is changed
+        self.spinner.children[0].image.source = text
+
+class ImageSpinnerApp(App):
+    connection = None
+    cursor = None
+
     def build(self):
         self.create_db_connection()
         self.create_table_if_not_exists()
         
         layout = BoxLayout(orientation='vertical')
-        self.spinner = CustomSpinner(text='blank', size_hint=(None, None), size=(400, 50))
-        self.spinner.bind(text=self.on_spinner_select)
-        self.create_spinner_options()
-        layout.add_widget(self.spinner)
         
-        self.selected_image = Image(source=self.images['blank']['path'], size_hint=(None, None), size=(200, 200))
+        self.image_spinner = ImageSpinner()
+        layout.add_widget(self.image_spinner)
+        
+        self.selected_image = Image(source=self.image_spinner.images['blank']['path'], size_hint=(None, None), size=(200, 200))
         layout.add_widget(self.selected_image)
         
         return layout
@@ -46,25 +87,5 @@ class ImageSpinnerApp(App):
                             (id INTEGER PRIMARY KEY, name TEXT, path TEXT)''')
         self.connection.commit()
 
-    def on_spinner_select(self, spinner, text):
-        self.selected_value = text
-        self.selected_image.source = self.images[text]['path']
-        self.save_to_database(text, self.images[text]['path'])
-
-    def save_to_database(self, name, path):
-        self.cursor.execute("INSERT INTO selected_option (name, path) VALUES (?, ?)", (name, path))
-        self.connection.commit()
-
-    def create_spinner_options(self):
-        dropdown = DropDown()
-        for key in self.images.keys():
-            btn = Button(text=key, size_hint_y=None, height=44)
-            btn.background_normal = self.images[key]['path']
-            btn.bind(on_release=lambda btn: dropdown.select(btn.text))
-            btn.bind(on_release=lambda btn: setattr(self.spinner, 'text', btn.text))
-            dropdown.add_widget(btn)
-        self.spinner.bind(on_release=dropdown.open)
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     ImageSpinnerApp().run()
-# just add image to default maybe from spinner_img.py

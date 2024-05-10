@@ -6,11 +6,34 @@ from kivy.uix.label import Label
 from kivy.uix.carousel import Carousel
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
-from kivy.uix.spinner import Spinner
+from kivy.uix.spinner import Spinner, SpinnerOption
 from kivy.uix.popup import Popup
 from datetime import datetime, timedelta, date
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
+from kivy.lang import Builder
+from kivy.uix.dropdown import DropDown
+from kivy.metrics import dp 
+from kivy.graphics import Color, Line
+class MenuButton(Button):
+    pass
+class BlueButton(Button):
+    pass
+class HeadingLabel(Label):
+    pass
+class CustomSpinnerOption(SpinnerOption):
+    def __init__(self, **kwargs):
+        super(CustomSpinnerOption, self).__init__(**kwargs)
+        with self.canvas.before:
+            Color(1, 1, 1, 1)  # Set color to white
 
+    def on_size(self, instance, value):
+        self.border.rectangle = (self.x, self.y, self.width, self.height)
+class SumInput(TextInput):
+    pass
+class DescriptionInput(TextInput):
+    pass
+class CustomSpinner(Spinner):
+    pass
 # Database setup
 def init_db():
     conn = sqlite3.connect('expenseapp.db')
@@ -97,7 +120,7 @@ class ExpenseScreen(BoxLayout):
         self.table_name = "expenses_" + date.strftime("%d_%m_%Y")
         create_table(date)  # Create table for the specific date if not exists
 
-        self.add_widget(Label(text=self.date, size_hint=(1, 0.1)))
+        self.add_widget(HeadingLabel(text=self.date, size_hint=(1, 0.1)))
         self.add_widget(Label(text=self.weekday, size_hint=(1, 0.1)))
         
         main_layout = FloatLayout(size_hint=(1, 0.7))
@@ -108,16 +131,20 @@ class ExpenseScreen(BoxLayout):
 
         input_layout = BoxLayout(orientation='horizontal', size_hint=(0.8, 0.6), pos_hint={'center_x': 0.5, 'center_y': 0.5})
 
-        sum_layout = BoxLayout(orientation='vertical', size_hint=(0.2, 1))
-        description_layout = BoxLayout(orientation='vertical', size_hint=(0.4, 1))
-        category_layout = BoxLayout(orientation='vertical', size_hint=(0.3, 1))
-        categories = ["Food", "Transportation", "Entertainment", "Utilities", "Other"] + [""]
+        sum_layout = BoxLayout(orientation='vertical', size_hint=(0.2, 1), spacing = 5)
+        description_layout = BoxLayout(orientation='vertical', size_hint=(0.5, 1), spacing = 5)
+        category_layout = BoxLayout(orientation='vertical', size_hint=(0.2, 1), spacing = 5)
+        categories = ["Food", "Transport", "Cafe", "Utilities", "Sport"] + [""]
 
         for _ in range(10):
-            sum_input = TextInput(hint_text="Sum", multiline=False, height=50)
-            description_input = TextInput(hint_text="Description", multiline=False, height=50)
-            category_spinner = Spinner(text='', values=categories, height=50)
-            
+            sum_input = SumInput(hint_text="Sum", multiline=False, height=50)
+            description_input = DescriptionInput(hint_text="Description", multiline=False, height=50)
+            category_spinner = CustomSpinner(text='', values=categories, height=50)
+            category_spinner.color = (1, 1, 1, 1)
+            category_spinner.dropdown_cls.spacing = 10
+            for option in category_spinner._dropdown.container.children:
+                option.color = (1, 1, 1, 1)
+                option.height = 30 
             self.sum_inputs.append(sum_input)
             self.description_inputs.append(description_input)
             self.category_spinners.append(category_spinner)
@@ -135,11 +162,12 @@ class ExpenseScreen(BoxLayout):
         
         main_layout.add_widget(input_layout)
         self.add_widget(main_layout)
-        self.total_label = Label(text="", size_hint=(1, 0.1))
+        self.total_label = HeadingLabel(text="", size_hint=(1, 0.1))
         self.add_widget(self.total_label)
-        self.submit_button = Button(text=get_button_state(self.date), size_hint=(1, 0.1))
+        self.submit_button = BlueButton(text=get_button_state(self.date), size_hint=(0.85, 0.1), pos_hint={'center_x': 0.5})
         self.submit_button.bind(on_press=self.on_button_press)
         self.add_widget(self.submit_button)
+        self.add_widget(BoxLayout(size_hint=(1, 0.07)))
         self.load_data()
         self.load_total()
         # Load existing data into input fields
@@ -165,7 +193,7 @@ class ExpenseScreen(BoxLayout):
             self.set_readonly(True)
             instance.text = 'Edit'
              # Update total label
-            self.total_label.text = f"Total: {total}"
+            self.total_label.text = f"{round(total)} UAH"
             # Save total to separate table
             save_total(self.date, total)
         elif instance.text == 'Edit':
@@ -177,7 +205,7 @@ class ExpenseScreen(BoxLayout):
     def load_total(self):
         total = get_total(self.date)
         if total is not None:
-            self.total_label.text = f"Total: {total}"
+            self.total_label.text = f"{round(total)} UAH"
     def set_readonly(self, readonly):
         for sum_input, description_input, category_spinner in zip(self.sum_inputs, self.description_inputs, self.category_spinners):
             sum_input.readonly = readonly
@@ -190,10 +218,10 @@ class ExpenseScreen(BoxLayout):
         if button_state == 'Edit':
             total = get_total(self.date)
             if total is not None:
-                self.total_label.text = f"Total: {total}"
+                self.total_label.text = f"{round(total)} UAH"
             else:
                 self.total_label.text = ""
-
+# Menu
         # Set readonly state based on button state
         self.set_readonly(button_state == 'Edit')
     def load_data(self):
@@ -256,7 +284,7 @@ class MainScreen(Screen):
         main_layout = BoxLayout(orientation='vertical')
 
         # Create the menu button
-        menu_button = Button(text="Menu", size_hint=(None, None), size=(100, 50))
+        menu_button = MenuButton(text="", size_hint=(None, None), size=(50, 50))
         menu_button.bind(on_press=self.open_menu_popup)
         main_layout.add_widget(menu_button)
 

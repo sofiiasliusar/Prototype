@@ -5,10 +5,38 @@
         Rectangle:
             pos: self.pos
             size: self.size
+        
 
+<SumInput@TextInput>:
+    hint_text: "Sum"
+    multiline: False
+    height: 50
+    background_color: 0.85, 0.85, 0.85, 1 
+    foreground_color: 0, 0, 0, 1  
+    padding: [5, 5, 5, 5]
+    font_size: 16  
+    background_normal: r"C:\Prototype-main\sprites\sum.png"  
+    background_active: r"C:\Prototype-main\sprites\sum.png"
+   
+            
+<CustomSpinner@Spinner>:
+    background_normal: r"C:\Prototype-main\sprites\category.png"
+    background_disabled_normal: r"C:\Prototype-main\sprites\category.png"
+    option_cls: "SpinnerOption"
+    disabled_color: 1, 1, 1, 1
+<SpinnerOption>:
+
+    background_normal: r"C:\Prototype-main\sprites\category.png"
+<MenuButton>:
+    background_normal: r"C:\Prototype-main\sprites\menu.png"
 <Label>:
+    font_size: 16  
     color: 0, 0, 0, 1 
-
+<HeadingLabel>:
+    font_size: 32  
+<BlueButton>:
+    color: 1, 1, 1, 1
+    background_normal: r"C:\Prototype-main\sprites\button.png"
 <DescriptionInput@TextInput>:
     hint_text: "Description"
     multiline: False
@@ -24,11 +52,3 @@
         Rectangle:
             pos: self.pos[0], self.pos[1]
             size: self.size[0], 1
-# <MySpinner@Spinner>:
-#     height: 50  # Adjust the height of the spinner options as needed
-#     padding: [10, 10]  # Adjust padding as needed
-    
-#     # Specify image paths as options
-#     options: [{'text': '', 'background_normal': 'image1.png'}, 
-#               {'text': '', 'background_normal': 'image2.png'}, 
-#               {'text': '', 'background_normal': 'image3.png'}]
